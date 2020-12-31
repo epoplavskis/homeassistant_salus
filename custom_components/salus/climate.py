@@ -11,6 +11,7 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
+    PRECISION_TENTHS,
     CONF_HOST,
     CONF_TOKEN
 )
@@ -140,7 +141,7 @@ class SalusThermostat(ClimateEntity):
     @property
     def precision(self):
         """Return the precision of the system."""
-        return self._coordinator.data.get(self._idx).precision
+        return PRECISION_TENTHS
 
     @property
     def current_temperature(self):
