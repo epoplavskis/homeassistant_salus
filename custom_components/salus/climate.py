@@ -7,7 +7,8 @@ import voluptuous as vol
 from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity
 from homeassistant.components.climate.const import (
     HVAC_MODE_HEAT,
-    HVAC_MODE_OFF
+    HVAC_MODE_OFF,
+    HVAC_MODE_AUTO
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -19,6 +20,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from pyit600.exceptions import IT600AuthenticationError, IT600ConnectionError
 from pyit600.gateway import IT600Gateway
+
+OPERATION_LIST = [HVAC_MODE_HEAT, HVAC_MODE_OFF, HVAC_MODE_AUTO]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -156,11 +159,19 @@ class SalusThermostat(ClimateEntity):
     def hvac_mode(self):
         """Return the current operation. head, cool idle."""
         return self._coordinator.data.get(self._idx).hvac_mode
+        if self._coordinator.data.get(self._idx).preset_mode == "Off":
+            return HVAC_MODE_OFF
+        elif self._coordinator.data.get(self._idx).preset_mode == "Permanent Hold":
+            return HVAC_MODE_HEAT
+        elif self._coordinator.data.get(self._idx).preset_mode == "Follow Schedule":
+            return HVAC_MODE_AUTO
+        else:
+            return None
 
     @property
     def hvac_modes(self):
         """Return the operation modes list."""
-        return self._coordinator.data.get(self._idx).hvac_modes
+        return OPERATION_LIST
 
     @property
     def hvac_action(self):
