@@ -5,6 +5,7 @@ from asyncio import sleep
 
 from homeassistant import config_entries, core
 from homeassistant.helpers import device_registry as dr
+from integrationhelper.const import CC_STARTUP_VERSION
 
 from homeassistant.const import (
     CONF_HOST,
@@ -15,7 +16,11 @@ from pyit600.exceptions import IT600AuthenticationError, IT600ConnectionError
 from pyit600.gateway import IT600Gateway
 
 from .config_flow import CONF_FLOW_TYPE, CONF_USER
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    ISSUE_URL,
+    VERSION
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -41,6 +46,11 @@ async def async_setup_gateway_entry(hass: core.HomeAssistant, entry: config_entr
     """Set up the Gateway component from a config entry."""
     host = entry.data[CONF_HOST]
     euid = entry.data[CONF_TOKEN]
+
+    # Log startup message
+    _LOGGER.info(
+        CC_STARTUP_VERSION.format(name=DOMAIN, version=VERSION, issue_link=ISSUE_URL)
+    )
 
     # Connect to gateway
     gateway = IT600Gateway(host=host, euid=euid)
@@ -76,9 +86,15 @@ async def async_setup_gateway_entry(hass: core.HomeAssistant, entry: config_entr
         sw_version=gateway_info.sw_version,
     )
 
-    for component in GATEWAY_PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
-        )
+    await hass.config_entries.async_forward_entry_setups(entry, GATEWAY_PLATFORMS)
 
     return True
+
+async def async_unload_entry(hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry) -> bool:
+    """Unload a config entry."""
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        config_entry, GATEWAY_PLATFORMS
+    )
+    if unload_ok:
+        hass.data[DOMAIN].pop(config_entry.entry_id)
+    return unload_ok
