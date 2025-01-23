@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/epoplavskis/homeassistant_salus"><img src="https://salus-smarthome.eu/wp-content/themes/salus-controls/img/logo.svg" height="140"></a>
+  <a href="https://github.com/epoplavskis/homeassistant_salus"><img src="https://shop.salusinc.com/cdn/shop/files/saluslogo_-_600x160_eea8b0d2-55bf-43fa-a46a-2455b56d73c5_384x128.png?v=1623083270" height="140"></a>
 </p>
 
 # HomeAssistant - Salus Controls iT600 Smart Home Custom Component

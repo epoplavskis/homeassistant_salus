@@ -6,9 +6,8 @@ import async_timeout
 import voluptuous as vol
 from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity
 from homeassistant.components.climate.const import (
-    HVAC_MODE_HEAT,
-    HVAC_MODE_COOL,
-    HVAC_MODE_OFF,
+    HVACMode,
+    ClimateEntityFeature,
     FAN_OFF,
     FAN_AUTO,
     FAN_LOW,
@@ -92,11 +91,15 @@ class SalusThermostat(ClimateEntity):
         self.async_on_remove(
             self._coordinator.async_add_listener(self.async_write_ha_state)
         )
-
+    
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return self._coordinator.data.get(self._idx).supported_features
+        # definetly needs a better approach
+        # return self._coordinator.data.get(self._idx).supported_features
+
+        supported_features = ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.FAN_MODE
+        return supported_features
 
     @property
     def available(self):
@@ -213,6 +216,7 @@ class SalusThermostat(ClimateEntity):
 
     async def async_set_fan_mode(self, fan_mode):
         """Set fan speed (auto, low, medium, high, off)."""
+        _LOGGER.info('set_fan_mode: ' + str(fan_mode))
         if fan_mode == FAN_OFF:
             mode = "Off"
         elif fan_mode == FAN_LOW:
@@ -228,9 +232,9 @@ class SalusThermostat(ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set operation mode (auto, heat, cool)."""
-        if hvac_mode == HVAC_MODE_HEAT:
+        if hvac_mode == HVACMode.HEAT:
             mode = "heat"
-        elif hvac_mode == HVAC_MODE_COOL:
+        elif hvac_mode == HVACMode.COOL:
             mode = "cool"
         else:
             mode = "auto"
