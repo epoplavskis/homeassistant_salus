@@ -7,6 +7,7 @@ import voluptuous as vol
 from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity
 from homeassistant.components.climate.const import (
     HVACMode,
+    HVACAction,
     ClimateEntityFeature,
     FAN_OFF,
     FAN_AUTO,
@@ -45,9 +46,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         This is the place to pre-process the data to lookup tables
         so entities can quickly look up their data.
         """
-        async with async_timeout.timeout(10):
-            await gateway.poll_status()
-            return gateway.get_climate_devices()
+        try:
+            async with async_timeout.timeout(10):
+                await gateway.poll_status()
+                return gateway.get_climate_devices()
+        except Exception as e:
+            _LOGGER.error("Failed to fetch data from Salus API: %s", e)
+            raise UpdateFailed("Failed to update device data")
 
     coordinator = DataUpdateCoordinator(
         hass,
@@ -91,12 +96,16 @@ class SalusThermostat(ClimateEntity):
         self.async_on_remove(
             self._coordinator.async_add_listener(self.async_write_ha_state)
         )
-
+    
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        supported_features = ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE
+        # definetly needs a better approach
+        # return self._coordinator.data.get(self._idx).supported_features
+
+        supported_features = ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.FAN_MODE
         return supported_features
+
 
     @property
     def available(self):
@@ -158,11 +167,25 @@ class SalusThermostat(ClimateEntity):
     def hvac_modes(self):
         """Return the operation modes list."""
         return self._coordinator.data.get(self._idx).hvac_modes
-
+    
     @property
     def hvac_action(self):
-        """Return the current running hvac operation if supported."""
-        return self._coordinator.data.get(self._idx).hvac_action
+        """Return the current running HVAC operation if supported."""
+        hv_action_curr = self._coordinator.data.get(self._idx).hvac_action
+        if hv_action_curr == "off":
+            hv_action_act = HVACAction.OFF
+        elif hv_action_curr == "heating":
+            hv_action_act = HVACAction.HEATING
+        elif hv_action_curr == "heating (idling)" or hv_action_curr == "cooling (idling)" or hv_action_curr == "idle":
+            hv_action_act = HVACAction.IDLE
+        elif hv_action_curr == "cooling":
+            hv_action_act = HVACAction.COOLING
+        else:
+            # Handle unknown values (could log a warning or return IDLE)
+            _LOGGER.warning("Unknown HVAC action: %s. Defaulting to DEFROSTING.", hv_action_curr)
+            hv_action_act = HVACAction.DEFROSTING
+            
+        return hv_action_act
 
     @property
     def target_temperature(self):
@@ -224,8 +247,11 @@ class SalusThermostat(ClimateEntity):
             mode = "High"
         else:
             mode = "Auto"
-        await self._gateway.set_climate_device_fan_mode(self._idx, mode)
-        await self._coordinator.async_request_refresh()
+        try:
+            await self._gateway.set_climate_device_fan_mode(self._idx, mode)
+            await self._coordinator.async_request_refresh()
+        except Exception as e:
+            _LOGGER.error("Failed to set fan mode for thermostat %s: %s", self.name, e)
 
     async def async_set_hvac_mode(self, hvac_mode):
         """Set operation mode (auto, heat, cool)."""
@@ -235,8 +261,11 @@ class SalusThermostat(ClimateEntity):
             mode = "cool"
         else:
             mode = "auto"
-        await self._gateway.set_climate_device_mode(self._idx, mode)
-        await self._coordinator.async_request_refresh()
+        try:
+            await self._gateway.set_climate_device_mode(self._idx, mode)
+            await self._coordinator.async_request_refresh()
+        except Exception as e:
+            _LOGGER.error("Failed to set HVAC mode for thermostat %s: %s", self.name, e)
 
     async def async_set_preset_mode(self, preset_mode):
         """Set preset mode (Off, Permanent Hold, Eco, Temporary Hold, Follow Schedule)"""
