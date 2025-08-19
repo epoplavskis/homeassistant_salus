@@ -106,7 +106,6 @@ class SalusThermostat(ClimateEntity):
         supported_features = ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF | ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE | ClimateEntityFeature.FAN_MODE
         return supported_features
 
-
     @property
     def available(self):
         """Return if entity is available."""
