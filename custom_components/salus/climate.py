@@ -230,9 +230,11 @@ class SalusThermostat(ClimateEntity):
         await self._gateway.set_climate_device_fan_mode(self._idx, mode)
         await self._coordinator.async_request_refresh()
 
-    async def async_set_hvac_mode(self, hvac_mode):
-        """Set operation mode (auto, heat, cool)."""
-        if hvac_mode == HVACMode.HEAT:
+   async def async_set_hvac_mode(self, hvac_mode):
+        """Set operation mode (off, auto, heat, cool)."""
+        if hvac_mode == HVACMode.OFF:
+            mode = "off"
+        elif hvac_mode == HVACMode.HEAT:
             mode = "heat"
         elif hvac_mode == HVACMode.COOL:
             mode = "cool"
