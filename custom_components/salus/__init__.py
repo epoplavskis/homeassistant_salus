@@ -4,6 +4,7 @@ import time
 from asyncio import sleep
 
 from homeassistant import config_entries, core
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 
 from homeassistant.const import (
@@ -11,7 +12,11 @@ from homeassistant.const import (
     CONF_TOKEN
 )
 
-from pyit600.exceptions import IT600AuthenticationError, IT600ConnectionError
+from pyit600.exceptions import (
+    IT600AuthenticationError,
+    IT600CommandError,
+    IT600ConnectionError,
+)
 from pyit600.gateway import IT600Gateway
 
 from .config_flow import CONF_FLOW_TYPE, CONF_USER
@@ -55,11 +60,29 @@ async def async_setup_gateway_entry(hass: core.HomeAssistant, entry: config_entr
                 else:
                     await sleep(3)
     except IT600ConnectionError as ce:
-        _LOGGER.error("Connection error: check if you have specified gateway's HOST correctly.")
-        return False
+        raise ConfigEntryNotReady(
+            f"Could not reach the iT600 gateway at {host}. "
+            "Check that the host is correct and the gateway is powered on."
+        ) from ce
     except IT600AuthenticationError as ae:
-        _LOGGER.error("Authentication error: check if you have specified gateway's EUID correctly.")
-        return False
+        # Despite its name, pyit600 raises this only when the request to
+        # /deviceid/read timed out while a plain GET on the gateway still
+        # answers - that is, the web server is up but the device API is not
+        # serving yet. A gateway that is still booting looks exactly like
+        # this, so retry rather than give up. A wrong EUID does not come out
+        # here; it is answered quickly and fails to decrypt, which pyit600
+        # reports as IT600CommandError below.
+        raise ConfigEntryNotReady(
+            f"The iT600 gateway at {host} is reachable but its device API is "
+            "not responding yet; it is probably still starting up."
+        ) from ae
+    except IT600CommandError as cmde:
+        # The gateway answered, but the reply could not be decrypted with the
+        # configured EUID. Retrying will never fix that, so fail for good.
+        raise ConfigEntryError(
+            f"The iT600 gateway at {host} replied with data that could not be "
+            "decrypted. Check that the EUID is correct."
+        ) from cmde
 
     hass.data[DOMAIN][entry.entry_id] = gateway
 

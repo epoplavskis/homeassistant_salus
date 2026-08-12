@@ -30,6 +30,26 @@ When you are done with configuration you should see your devices in Configuratio
 
 If you can't connect using EUID written down on the bottom of your gateway (which looks something like `001E5E0D32906128`), try using `0000000000000000` as EUID.
 
+## "Authentication error" right after a restart or a power cut
+
+If the log shows
+
+```
+Authentication error: check if you have specified gateway's EUID correctly.
+```
+
+only when Home Assistant and the gateway started at the same time, the EUID is
+almost certainly fine and there is nothing to change. `pyit600` reports that
+error whenever the request to `/deviceid/read` did not go through while a plain
+`GET /` on the gateway still answered - which is what a gateway looks like when
+its web server is up but its device API is not serving yet, i.e. one that has
+not finished booting. Home Assistant retries on its own until the gateway
+answers.
+
+A genuinely wrong EUID fails differently: the gateway replies immediately with a
+short body that cannot be decrypted, and the integration reports that the reply
+could not be decrypted and stops rather than retrying.
+
 Also check if you have "Local Wifi Mode" enabled:
 * Open Smart Home app on your phone
 * Sign in
