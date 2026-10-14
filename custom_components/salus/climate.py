@@ -200,6 +200,14 @@ class SalusThermostat(ClimateEntity):
     def locked(self):
         return self._coordinator.data.get(self._idx).locked
 
+    @property
+    def extra_state_attributes(self):
+        """Return additional diagnostic attributes not modeled as ClimateEntity properties."""
+        floor_temperature = self._coordinator.data.get(self._idx).current_floor_temperature
+        if floor_temperature is None:
+            return None
+        return {"floor_temperature": floor_temperature}
+
     async def async_set_temperature(self, **kwargs):
         """Set new target temperature."""
         temperature = kwargs.get(ATTR_TEMPERATURE)

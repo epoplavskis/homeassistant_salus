@@ -12,6 +12,18 @@ This is a custom component to allows you to control and monitor your Salus iT600
 
 See the [readme of underlying pyit600 library](https://github.com/epoplavskis/pyit600/blob/master/README.md)
 
+## SQ610 floor sensor
+
+If a SQ610 thermostat has an external sensor connected to its S1/S2 input and configured as
+"floor sensor" in the installer menu, a separate `sensor.<thermostat name> floor temperature`
+entity is created for it automatically (device_class `temperature`, attached to the same
+device as the thermostat). It's also exposed as the `floor_temperature` attribute on the
+thermostat's `climate.*` entity.
+
+This entity is created once at integration startup, only for thermostats that already report a
+floor reading at that time. If you wire up the sensor later, **reload the integration**
+(Settings -> Devices & Services -> Salus iT600 -> Reload) to pick it up.
+
 # Installation and Configuration
 
 ## HACS (recommended)
